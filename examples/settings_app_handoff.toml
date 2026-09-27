@@ -1,0 +1,37 @@
+name = "Settings survives browser handoff and relaunch"
+
+# Start on the main Settings screen of an English-language Android emulator.
+
+[[steps]]
+assert_app = "com.android.settings"
+
+[[steps]]
+assert_text = "Network & internet"
+
+[[steps]]
+open_url = "https://example.com"
+package = "com.android.chrome"
+
+[[steps]]
+wait_ms = 2000
+
+[[steps]]
+assert_app = "com.android.chrome"
+
+[[steps]]
+open_app = "com.android.settings"
+
+[[steps]]
+assert_app = "com.android.settings"
+
+[[steps]]
+assert_text = "Network & internet"
+
+[[steps]]
+relaunch_app = "com.android.settings"
+
+[[steps]]
+assert_app = "com.android.settings"
+
+[[steps]]
+assert_text = "Network & internet"
