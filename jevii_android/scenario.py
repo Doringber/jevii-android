@@ -13,7 +13,7 @@ from .jev import JevDecisionClient
 
 STEP_OPERATIONS = {
     "goal", "open_app", "open_url", "wait_ms", "home", "back",
-    "relaunch_app", "assert_app", "assert_text",
+    "relaunch_app", "assert_app", "assert_text", "type_text", "enter", "tap_text",
 }
 
 
@@ -37,14 +37,24 @@ def load_case(path: str | Path) -> dict[str, Any]:
         if operation == "wait_ms":
             if not isinstance(value, int) or value < 0:
                 raise ValueError(f"step {index}: wait_ms must be a non-negative integer")
-        elif operation in {"home", "back"}:
+        elif operation in {"home", "back", "enter"}:
             if value is not True:
                 raise ValueError(f"step {index}: {operation} must be true")
         elif not isinstance(value, str) or not value.strip():
             raise ValueError(f"step {index}: {operation} must be a non-empty string")
         if operation == "open_url" and step.get("package") is not None and not isinstance(step["package"], str):
             raise ValueError(f"step {index}: package must be a string")
+        if operation == "tap_text" and "optional" in step and not isinstance(step["optional"], bool):
+            raise ValueError(f"step {index}: optional must be a boolean")
     return case
+
+
+def _launch_app(device: AndroidDevice, package: str) -> None:
+    resolved = device.adb.run("shell", "cmd", "package", "resolve-activity", "--brief", package)
+    component = next((line.strip() for line in reversed(resolved.splitlines()) if "/" in line), None)
+    if not component:
+        raise RuntimeError(f"Could not resolve launcher activity for {package}")
+    device.adb.run("shell", "am", "start", "-n", component)
 
 
 def run_case(case: dict[str, Any], device: AndroidDevice, max_steps: int = 30) -> dict[str, Any]:
@@ -61,7 +71,7 @@ def run_case(case: dict[str, Any], device: AndroidDevice, max_steps: int = 30) -
                 result.update(goal)
                 result["ok"] = bool(goal.get("ok"))
             elif operation == "open_app":
-                device.u2.app_start(value, stop=False)
+                _launch_app(device, value)
                 result["package"] = value
             elif operation == "open_url":
                 args = ["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", value]
@@ -74,9 +84,20 @@ def run_case(case: dict[str, Any], device: AndroidDevice, max_steps: int = 30) -
                 device.adb.home()
             elif operation == "back":
                 device.adb.back()
+            elif operation == "type_text":
+                device.u2.send_keys(value, clear=True)
+            elif operation == "tap_text":
+                target = device.u2(text=value)
+                timeout = float(step.get("timeout_seconds", 5))
+                if target.exists(timeout=timeout):
+                    target.click()
+                elif not step.get("optional", False):
+                    raise RuntimeError(f"Text not found: {value}")
+            elif operation == "enter":
+                device.u2.press("enter")
             elif operation == "relaunch_app":
                 device.adb.run("shell", "am", "force-stop", value)
-                device.u2.app_start(value, stop=False)
+                _launch_app(device, value)
                 result["package"] = value
             elif operation == "assert_app":
                 actual, activity = device.adb.current_app()

@@ -356,9 +356,19 @@ Check the file without connecting to Android or Jev:
 jevii-android run-case examples/settings_app_handoff.toml --check
 ```
 
-Supported steps are `goal`, `open_app`, `open_url` (optional `package`), `wait_ms`, `home`, `back`, `relaunch_app`, `assert_app`, and `assert_text`. Each `goal` uses Jev to choose UI actions and can override `max_steps`; the direct operations avoid extra model calls. A case stops on the first failed action/assertion and prints a JSON result. Jev goal traces continue to be written under `.runs/`.
+Supported steps are `goal`, `open_app`, `open_url` (optional `package`), `tap_text`, `type_text`, `enter`, `wait_ms`, `home`, `back`, `relaunch_app`, `assert_app`, and `assert_text`. Each `goal` uses Jev to choose UI actions and can override `max_steps`; the direct operations avoid extra model calls. A case stops on the first failed action/assertion and prints a JSON result. Jev goal traces continue to be written under `.runs/`.
 
 The Settings example assumes the emulator is on the main Settings screen, where **Network & internet** is visible. It opens a page in Chrome, returns to Settings, then force-stops and relaunches Settings and checks the screen again. Run it on an English-language emulator or change the asserted text to match the device language. The runner stops on the first failed precondition. Keep `TYPESAFE_API_KEY` in your local ignored `.env` or environment; do not put credentials in a case file.
+
+The IMDb + Box APK example searches for *The Martian*, opens its IMDb title page, switches to the supplied Box app, returns to IMDb, and verifies the title then the home screen after a force-stop/relaunch. Run it with `jevii-android run-case examples/imdb_box_lifecycle.toml --serial emulator-5554`. Both apps stay signed out. The supplied Box APK uses package `com.box.gallery` and opens an AI model/task catalog; it is not the official Box cloud-storage app package `com.box.android` ([Google Play listing](https://play.google.com/store/apps/details?id=com.box.android)). The example tests Android app handoff and lifecycle behavior; it does not require a Box login or the app’s microphone permission.
+
+### Recorded emulator demo
+
+This recording shows the scenario running on an Android emulator:
+
+<video controls width="720" src="assets/imdb-box-lifecycle-small.mp4">IMDb + Box Android lifecycle demo</video>
+
+The emulator capture shows the supplied Box app’s content area as black even though the scenario can inspect its UI and verify **New Chat**. The video demonstrates the cross-app handoff and IMDb restart; this emulator did not render Box’s screen into the recording.
 
 ---
 
@@ -480,7 +490,8 @@ jevii-android/
 ├── scripts/
 │   └── emulator_demo.sh
 ├── examples/
-│   └── settings_app_handoff.toml
+│   ├── settings_app_handoff.toml
+│   └── imdb_box_lifecycle.toml
 └── tests/
 ```
 

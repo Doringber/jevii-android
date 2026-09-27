@@ -1,0 +1,71 @@
+name = "IMDb movie research survives a Box interruption"
+
+# Begin on IMDb's signed-out home screen. Keep the supplied Box app signed out;
+# its task catalog is enough to exercise an app switch without personal content.
+
+[[steps]]
+relaunch_app = "com.imdb.mobile"
+
+[[steps]]
+wait_ms = 2000
+
+[[steps]]
+assert_app = "com.imdb.mobile"
+
+[[steps]]
+tap_text = "NOT NOW"
+optional = true
+
+[[steps]]
+tap_text = "Skip rating"
+optional = true
+
+[[steps]]
+goal = "Open IMDb's Search tab so I can look up a movie"
+max_steps = 6
+
+[[steps]]
+tap_text = "Search IMDb"
+
+[[steps]]
+type_text = "The Martian"
+
+[[steps]]
+enter = true
+
+[[steps]]
+wait_ms = 3000
+
+[[steps]]
+goal = "Open the IMDb title page for the 2015 movie The Martian from these search results"
+max_steps = 8
+
+[[steps]]
+assert_text = "The Martian"
+
+[[steps]]
+open_app = "com.box.gallery"
+
+[[steps]]
+wait_ms = 4000
+
+[[steps]]
+assert_app = "com.box.gallery"
+
+[[steps]]
+assert_text = "New Chat"
+
+[[steps]]
+open_app = "com.imdb.mobile"
+
+[[steps]]
+assert_text = "The Martian"
+
+[[steps]]
+relaunch_app = "com.imdb.mobile"
+
+[[steps]]
+assert_app = "com.imdb.mobile"
+
+[[steps]]
+assert_text = "Search for shows, movies, people…"
