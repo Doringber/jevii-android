@@ -21,10 +21,13 @@ SYSTEM_CRITERIA = {
 
 
 class JevDecisionClient:
-    def __init__(self, api_key: str | None = None, model: str | None = None, base_url: str | None = None, policy: PolicyEngine | None = None):
+    def __init__(self, api_key: str | None = None, model: str | None = None, base_url: str | None = None, policy: PolicyEngine | None = None, timeout_seconds: float | None = None):
         self.api_key = api_key or os.getenv("TYPESAFE_API_KEY")
         self.model = model or os.getenv("JEV_MODEL", "jev-latest")
         self.base_url = base_url or os.getenv("JEV_BASE_URL", "https://api.typesafe.ai/v1/systemone")
+        self.timeout_seconds = timeout_seconds if timeout_seconds is not None else float(os.getenv("JEV_REQUEST_TIMEOUT_SECONDS", "12"))
+        if not 0 < self.timeout_seconds <= 60:
+            raise ValueError("Jev request timeout must be greater than 0 and at most 60 seconds")
         self.policy = policy or PolicyEngine()
         if not self.api_key:
             raise RuntimeError("TYPESAFE_API_KEY is required")
@@ -34,7 +37,7 @@ class JevDecisionClient:
             self.base_url,
             headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
             json={"model": self.model, "state": state, "questions": questions},
-            timeout=30,
+            timeout=self.timeout_seconds,
         )
         r.raise_for_status()
         return r.json()

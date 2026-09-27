@@ -21,7 +21,7 @@ class AdbClient:
             cmd += ["-s", serial]
         return cmd
 
-    def run(self, *args: str, timeout: int = 15, check: bool = True) -> str:
+    def run(self, *args: str, timeout: float = 15, check: bool = True) -> str:
         try:
             p = subprocess.run(
                 [*self._base(), *args],
@@ -44,8 +44,22 @@ class AdbClient:
                 devices.append(line.split("\t", 1)[0])
         return devices
 
-    def current_app(self) -> tuple[str | None, str | None]:
-        out = self.run("shell", "dumpsys", "window", "windows", check=False)
+    def current_app(self, timeout: float = 3) -> tuple[str | None, str | None]:
+        # activity-manager's top resumed record is considerably cheaper than
+        # dumping all window state, and remains the foreground source on modern Android.
+        timeout = max(0.1, min(3, timeout))
+        out = self.run("shell", "dumpsys", "activity", "activities", timeout=timeout, check=False)
+        patterns = [
+            r"topResumedActivity=.*?\s([\w.]+)/([\w.$]+)",
+            r"mResumedActivity:.*?\s([\w.]+)/([\w.$]+)",
+        ]
+        for pattern in patterns:
+            m = re.search(pattern, out)
+            if m:
+                return m.group(1), m.group(2)
+
+        # Keep the previous source as a compatibility fallback for older OEM builds.
+        out = self.run("shell", "dumpsys", "window", "windows", timeout=timeout, check=False)
         patterns = [
             r"mCurrentFocus=.*? ([\w.]+)/([\w.$]+)",
             r"mFocusedApp=.*? ([\w.]+)/([\w.$]+)",

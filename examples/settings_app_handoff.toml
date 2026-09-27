@@ -13,9 +13,6 @@ open_url = "https://example.com"
 package = "com.android.chrome"
 
 [[steps]]
-wait_ms = 2000
-
-[[steps]]
 assert_app = "com.android.chrome"
 
 [[steps]]

@@ -1,21 +1,19 @@
-name = "IMDb search survives Box app handoff and relaunch"
+name = "IMDb movie search survives a Box app interruption"
 story = """
-Restart IMDb to start clean.
+Open IMDb.
 If visible, tap "NOT NOW".
 If visible, tap "Skip rating".
 Search for "The Martian".
 Open the 2015 movie title.
 Switch to Box.
 Return to IMDb.
-Restart IMDb.
-Verify the home screen shows "Search for shows, movies, people…".
+Verify the screen shows "The Martian".
 """
 
 [apps.IMDb]
 package = "com.imdb.mobile"
 activity = ".HomeActivity"
 search_text = "Search for shows, movies, people…"
-home_text = "Search for shows, movies, people…"
 
 [apps.Box]
 package = "com.box.gallery"

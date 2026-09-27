@@ -19,4 +19,4 @@ def test_jev_selects_element_then_best_locator():
     action = FakeJev().decide("open Network & internet settings", state)
     assert action.action == ActionType.TAP
     assert action.target.strategy == TargetStrategy.RESOURCE_ID
-    assert action.target.value == "pkg:id/start"
+    assert action.target.value == "pkg:id/network"

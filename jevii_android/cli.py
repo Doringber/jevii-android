@@ -8,6 +8,7 @@ import sys
 from .agent import AndroidAgent
 from .device import AndroidDevice
 from .jev import JevDecisionClient
+from .nlp import NlpCompileError
 from .scenario import load_case, run_case, validate_case, write_result
 
 
@@ -63,6 +64,9 @@ def main(argv: list[str] | None = None) -> int:
             result = run_case(case, AndroidDevice(args.serial), max_steps=args.max_steps)
             write_result(result)
             return 0 if result["ok"] else 2
+        except NlpCompileError as e:
+            print(json.dumps({"ok": False, "error": str(e), "issues": e.issues}, indent=2, ensure_ascii=False), file=sys.stderr)
+            return 2
         except (OSError, ValueError) as e:
             print(json.dumps({"ok": False, "error": str(e)}, indent=2, ensure_ascii=False), file=sys.stderr)
             return 2

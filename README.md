@@ -307,60 +307,58 @@ jevii-android run "Open Battery settings"
 
 ## Reusable QA and product use cases
 
-Write a use case as a TOML file in `examples/`. Combine quick, deterministic Android operations and assertions with Jev-powered `goal` steps where the UI needs semantic navigation. This lets QA and product describe a multi-app flow once and rerun it from the CLI.
+Write a use case in plain language inside a TOML file in `examples/`. The `[apps]` table maps the names people use to Android package IDs; each app may also define a known launcher `activity`, `search_text`, or `home_text` so stable controls can be selected directly. `story` describes the steps. The local compiler turns supported instructions into checked Android operations and Jev navigation goals.
 
 ```toml
-name = "Settings survives browser handoff and relaunch"
+name = "IMDb movie research survives an app switch"
+story = """
+Open IMDb.
+Search for "The Martian".
+Open the 2015 movie title.
+Switch to Box.
+Return to IMDb.
+Verify the screen shows "The Martian".
+"""
 
-[[steps]]
-assert_app = "com.android.settings"
+[apps.IMDb]
+package = "com.imdb.mobile"
+activity = ".HomeActivity"
+search_text = "Search for shows, movies, people…"
+home_text = "Search for shows, movies, people…"
 
-[[steps]]
-assert_text = "Network & internet"
-
-[[steps]]
-open_url = "https://example.com"
-package = "com.android.chrome"
-
-[[steps]]
-wait_ms = 2000
-
-[[steps]]
-assert_app = "com.android.chrome"
-
-[[steps]]
-open_app = "com.android.settings"
-
-[[steps]]
-assert_text = "Network & internet"
-
-[[steps]]
-relaunch_app = "com.android.settings"
-
-[[steps]]
-assert_app = "com.android.settings"
-
-[[steps]]
-assert_text = "Network & internet"
+[apps.Box]
+package = "com.box.gallery"
+activity = ".MainActivity"
 ```
 
 Run it on the selected emulator/device:
 
 ```bash
-jevii-android run-case examples/settings_app_handoff.toml --serial emulator-5554
+jevii-android run-case examples/imdb_box_quick_handoff.toml --serial emulator-5554
 ```
 
-Check the file without connecting to Android or Jev:
+Compile the NLP story and inspect its complete plan without connecting to Android or Jev:
 
 ```bash
-jevii-android run-case examples/settings_app_handoff.toml --check
+jevii-android run-case examples/imdb_box_quick_handoff.toml --check
 ```
 
-Supported steps are `goal`, `open_app`, `open_url` (optional `package`), `tap_text`, `type_text`, `enter`, `wait_ms`, `home`, `back`, `relaunch_app`, `assert_app`, and `assert_text`. Each `goal` uses Jev to choose UI actions and can override `max_steps`; the direct operations avoid extra model calls. A case stops on the first failed action/assertion and prints a JSON result. Jev goal traces continue to be written under `.runs/`.
+Run the quick handoff and the longer force-stop/relaunch check separately:
+
+```bash
+jevii-android run-case examples/imdb_box_quick_handoff.toml --serial emulator-5554
+jevii-android run-case examples/imdb_box_lifecycle.toml --serial emulator-5554
+```
+
+The NLP compiler supports opening/switching/restarting mapped apps, visiting a URL in a mapped browser, searching for a quoted phrase, opening its movie/title page, quoted text taps and typing, Enter, Back, Home, waits, and checks for visible quoted text or an app home screen. Instructions it cannot map produce a structured issue and stop before Android is touched; it never silently drops a sentence. Use explicit TOML `[[steps]]` for an action outside this language, or express that one navigation as a Jev `goal`.
+
+Supported structured steps are `goal`, `open_app`, `open_url` (optional `package`), `tap_text`, `type_text`, `enter`, `wait_ms`, `home`, `back`, `relaunch_app`, `assert_app`, and `assert_text`. Each `goal` uses Jev to choose UI actions and can override `max_steps`; direct operations avoid extra model calls. App launch waits up to four seconds by default, app/text assertions up to 1.5 seconds, and optional text taps only 0.3 seconds. Override `timeout_seconds` on any waitable step when a device is slower. Jev API requests time out after 12 seconds by default; set `JEV_REQUEST_TIMEOUT_SECONDS` to tune that limit. Fixed sleeps are unnecessary for app and text checks; `wait_ms` remains available for real timed behavior.
+
+Cases stop at the first failed action/assertion and return its duration, expected/actual values, and an issue code with the next diagnostic check. Jev goal traces and screenshots are written under `.runs/`. `--check` prints the compiled plan; the run output reports each step’s duration so you can identify slow actions. The parser deliberately supports a documented subset of natural language; ambiguous or unsupported instructions are reported for correction rather than guessed.
 
 The Settings example assumes the emulator is on the main Settings screen, where **Network & internet** is visible. It opens a page in Chrome, returns to Settings, then force-stops and relaunches Settings and checks the screen again. Run it on an English-language emulator or change the asserted text to match the device language. The runner stops on the first failed precondition. Keep `TYPESAFE_API_KEY` in your local ignored `.env` or environment; do not put credentials in a case file.
 
-The IMDb + Box APK example searches for *The Martian*, opens its IMDb title page, switches to the supplied Box app, returns to IMDb, and verifies the title then the home screen after a force-stop/relaunch. Run it with `jevii-android run-case examples/imdb_box_lifecycle.toml --serial emulator-5554`. Both apps stay signed out. The supplied Box APK uses package `com.box.gallery` and opens an AI model/task catalog; it is not the official Box cloud-storage app package `com.box.android` ([Google Play listing](https://play.google.com/store/apps/details?id=com.box.android)). The example tests Android app handoff and lifecycle behavior; it does not require a Box login or the app’s microphone permission.
+The short example checks movie search across a Box app interruption; the lifecycle example additionally restarts IMDb and verifies a known home-screen label. Both apps stay signed out. The supplied Box APK uses package `com.box.gallery` and opens an AI model/task catalog; it is not the official Box cloud-storage app package `com.box.android` ([Google Play listing](https://play.google.com/store/apps/details?id=com.box.android)). The examples do not require a Box login or the app’s microphone permission.
 
 ### Recorded emulator demo
 
@@ -485,12 +483,15 @@ jevii-android/
 │   ├── policy.py         # uncertainty / execution gate
 │   ├── device.py         # uiautomator2 execution + screenshots
 │   ├── adb.py            # ADB system fallback
+│   ├── nlp.py            # natural-language use case compiler
+│   ├── scenario.py       # timed case runner + issue reports
 │   ├── models.py         # typed state/action/element models
 │   └── cli.py            # jevii-android CLI
 ├── scripts/
 │   └── emulator_demo.sh
 ├── examples/
 │   ├── settings_app_handoff.toml
+│   ├── imdb_box_quick_handoff.toml
 │   └── imdb_box_lifecycle.toml
 └── tests/
 ```
@@ -544,6 +545,9 @@ Already implemented:
 - [x] stuck detection
 - [x] emulator support
 - [x] unit tests
+- [x] strict natural-language use-case compilation
+- [x] per-step timeouts, durations, and actionable failure issues
+- [x] separate short handoff and full lifecycle examples
 
 Next:
 
