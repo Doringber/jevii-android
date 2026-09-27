@@ -5,3 +5,4 @@ __pycache__/
 .runs/
 .env
 .DS_Store
+assets/imdb-box-lifecycle.mp4
